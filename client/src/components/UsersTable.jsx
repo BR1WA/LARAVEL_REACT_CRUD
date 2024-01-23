@@ -10,11 +10,16 @@ const UsersTable = ({toast , setToast}) => {
   const [users,setUsers] = useState([]);
   const [openModal, setOpenModal] = useState(false);
   const [isLoading,setIsLoading] = useState(false);
+  const [submitValue, setSubmitValue] = useState('Add');
+  const [userId, setUserId] = useState();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    id : '',
   });
+
+    //READ
       const fetchUsers = async() => { try {
           const response = await axios.get('http://127.0.0.1:8000/api/user');
           setUsers(response.data.users);
@@ -23,10 +28,13 @@ const UsersTable = ({toast , setToast}) => {
           console.error('Error fetching users:', error);
         }
       };
-      fetchUsers();
+      useEffect(()=>{
+        fetchUsers();
+      },[])
 
-    const deleteUser = async(userId) => { try{
-      const response = await axios.delete(`http://127.0.0.1:8000/api/user/${userId}`);
+    //DELETE
+    const deleteUser = async(uID) => { try{
+      const response = await axios.delete(`http://127.0.0.1:8000/api/user/${uID}`);
       console.log(response);
       fetchUsers();
       }catch(error){
@@ -36,20 +44,32 @@ const UsersTable = ({toast , setToast}) => {
       }
     }
 
+    //CREATE & UPDATE
     const handleSubmit = async(e) => {
       e.preventDefault();
+      console.log(e)
       try{
-        const response = await axios.post(`http://127.0.0.1:8000/api/user`,formData)
-        console.log(response.data.message);
+        if(submitValue=="Add") {
+          const response = await axios.post(`http://127.0.0.1:8000/api/user`,formData)
+          console.log(response.data.message);
+        }else{
+          const response = await axios.put(`http://127.0.0.1:8000/api/user/${userId}`,formData)
+        }
         fetchUsers();
       }catch{
         console.error(response);
       }finally{
         setOpenModal(false);
-        setToast({
-          ...toast,
-          display: true,
-          message: response.message
+        // setToast({
+        //   ...toast,
+        //   display: true,
+        //   message: response.message
+        // });
+        setFormData({
+          ...formData,
+          name : '',
+          email : '',
+          password : '',
         })
       }
     }
@@ -59,17 +79,29 @@ const UsersTable = ({toast , setToast}) => {
         ...formData,
         [e.target.name]: e.target.value,
       });
-      console.log(formData);
+    }
+
+    //EDIT
+    function editUser(user) {
+      setOpenModal(true);
+      setSubmitValue('Update');
+      setFormData({
+        ...formData,
+        name : user.name,
+        email : user.email,
+        password : user.password,
+      });
+      setUserId(user.id);
     }
   return (
     <div className="overflow-x-auto">
     
-      <Button onClick={() => setOpenModal(true)}>Add User</Button>
-      <Modal show={openModal} size="md" popup onClose={() => setOpenModal(false)}>
+      <Button onClick={() => {setOpenModal(true);setSubmitValue('Add')}}>Add User</Button>
+      <Modal show={openModal} size="md" popup onClose={() => {setOpenModal(false);setSubmitValue('Add');}}>
         <Modal.Header />
         <Modal.Body>
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <h3 className="text-xl font-medium text-gray-900 dark:text-white">Add User To The Table</h3>
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white">{submitValue} User</h3>
             <div>
               <div className="mb-2 block">
                 <Label htmlFor="name" value="Your name" />
@@ -86,10 +118,10 @@ const UsersTable = ({toast , setToast}) => {
               <div className="mb-2 block">
                 <Label htmlFor="password" value="Your password" />
               </div>
-              <TextInput id="password" name='password' type="password" placeholder='john1234' value={formData.password} onChange={handleChange} required />
+              <TextInput id="password" name='password' placeholder='john1234' value={formData.password} onChange={handleChange} required />
             </div>
             <div className="w-full">
-              <Button type='submit'>Add</Button>
+              <Button type='submit'>{submitValue}</Button>
             </div>
           </form>
         </Modal.Body>
@@ -117,9 +149,9 @@ const UsersTable = ({toast , setToast}) => {
               <Table.Cell>{user.email}</Table.Cell>
               <Table.Cell>{user.password}</Table.Cell>
               <Table.Cell>
-                <a href="#" className="font-medium text-cyan-600 hover:underline dark:text-cyan-500">
+                <span className="font-medium text-cyan-600 hover:underline dark:text-cyan-500 cursor-pointer" onClick={()=>editUser(user)}>
                   Edit
-                </a>
+                </span>
               </Table.Cell>
               <Table.Cell>
                 <span className="font-medium text-red-600 hover:underline dark:text-red-500 cursor-pointer" onClick={()=>deleteUser(user.id)}>
